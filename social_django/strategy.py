@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.contenttypes.models import ContentType
@@ -10,6 +12,8 @@ from django.utils.encoding import force_str
 from django.utils.functional import Promise
 from django.utils.translation import get_language
 from social_core.strategy import BaseStrategy, BaseTemplateStrategy
+
+logger = logging.getLogger(__name__)
 
 
 def render_template_string(request, html, context=None):
@@ -98,10 +102,18 @@ class DjangoStrategy(BaseStrategy):
             return render_template_string(self.request, html, context)
 
     def authenticate(self, backend, *args, **kwargs):
+        logger.debug("Calling django strategy authenticate")
+        logger.debug(f"Backend: {backend}")
+        logger.debug(f"Args: {args}")
+        logger.debug(f"Kwargs: {kwargs}")
         kwargs["strategy"] = self
         kwargs["storage"] = self.storage
         kwargs["backend"] = backend
-        return authenticate(*args, **kwargs)
+        try:
+            return authenticate(*args, **kwargs)
+        except:
+            logger.exception("Error in social_django.strategy.authenticate")
+            raise
 
     def clean_authenticate_args(self, request, *args, **kwargs):
         # pipelines don't want a positional request argument
