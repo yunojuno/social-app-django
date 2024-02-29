@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME, login
 from django.contrib.auth.decorators import login_required
@@ -15,6 +17,8 @@ NAMESPACE = getattr(settings, setting_name("URL_NAMESPACE"), None) or "social"
 # platform default session lifetime.
 DEFAULT_SESSION_TIMEOUT = None
 
+logger = logging.getLogger(__name__)
+
 
 @never_cache
 @maybe_require_post
@@ -28,15 +32,24 @@ def auth(request, backend):
 @psa(f"{NAMESPACE}:complete")
 def complete(request, backend, *args, **kwargs):
     """Authentication complete view"""
-    return do_complete(
-        request.backend,
-        _do_login,
-        user=request.user,
-        redirect_name=REDIRECT_FIELD_NAME,
-        request=request,
-        *args,
-        **kwargs,
-    )
+    logger.debug("Authentication complete view")
+    logger.debug(f"Request: {request}")
+    logger.debug(f"Backend: {backend}")
+    logger.debug(f"Args: {args}")
+    logger.debug(f"Kwargs: {kwargs}")
+    try:
+        return do_complete(
+            request.backend,
+            _do_login,
+            user=request.user,
+            redirect_name=REDIRECT_FIELD_NAME,
+            request=request,
+            *args,
+            **kwargs,
+        )
+    except:
+        logger.exception("Error in social_django.views.complete view")
+        raise
 
 
 @never_cache
@@ -46,14 +59,10 @@ def complete(request, backend, *args, **kwargs):
 @csrf_protect
 def disconnect(request, backend, association_id=None):
     """Disconnects given backend from current logged in user."""
-    return do_disconnect(
-        request.backend, request.user, association_id, redirect_name=REDIRECT_FIELD_NAME
-    )
+    return do_disconnect(request.backend, request.user, association_id, redirect_name=REDIRECT_FIELD_NAME)
 
 
-def get_session_timeout(
-    social_user, enable_session_expiration=False, max_session_length=None
-):
+def get_session_timeout(social_user, enable_session_expiration=False, max_session_length=None):
     if enable_session_expiration:
         # Retrieve an expiration date from the social user who just finished
         # logging in; this value was set by the social auth backend, and was
